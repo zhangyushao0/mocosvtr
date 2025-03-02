@@ -26,16 +26,33 @@ class CTCImageDataset(Dataset):
         self.img_dir = img_dir
         self.transform = transform
         self.char_to_idx = char_to_idx
+        from PIL import ImageFile
+
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
 
         # 读取标签文件
         self.samples = []
+        invalid_samples = 0
         with open(label_file, "r") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) >= 2:
                     img_name = parts[0]
                     text = parts[1]  # 原始标签为文本
-                    self.samples.append((img_name, text))
+                    img_path = os.path.join(img_dir, img_name)
+
+                    # 验证图像是否可以正常打开
+                    try:
+                        with Image.open(img_path) as img:
+                            img.verify()  # 验证图像文件
+                        self.samples.append((img_name, text))
+                    except:
+                        invalid_samples += 1
+                        continue
+
+        print(
+            f"Loaded {len(self.samples)} valid images, skipped {invalid_samples} invalid images"
+        )
 
     def __len__(self):
         return len(self.samples)

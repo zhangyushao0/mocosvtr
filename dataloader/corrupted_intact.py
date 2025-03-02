@@ -86,7 +86,7 @@ transform = transforms.Compose(
 # 创建数据集
 train_dataset = CTCImageDataset(
     label_file="data/syth80k/train/labels_s.txt",
-    img_dir="data/syth80k/train/s_incomplete",
+    img_dir="data/syth80k/train/s_f/s_f",
     char_to_idx=char_to_idx,
     transform=transform,
 )

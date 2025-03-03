@@ -457,32 +457,32 @@ class MMCRNN(BaseModel):
         augmented_imgs = augmented_imgs * brightness
         augmented_imgs = (augmented_imgs - 0.5) * contrast + 0.5
         
-        # 2. 模拟缺损 (随机擦除)
-        for i in range(batch_size):
-            # 50%的概率应用缺损模拟
-            if torch.rand(1).item() < 0.5:
-                h, w = imgs.shape[2], imgs.shape[3]
+        # # 2. 模拟缺损 (随机擦除)
+        # for i in range(batch_size):
+        #     # 50%的概率应用缺损模拟
+        #     if torch.rand(1).item() < 0.5:
+        #         h, w = imgs.shape[2], imgs.shape[3]
                 
-                # 创建1-5个随机擦除区域
-                num_erases = torch.randint(1, 6, (1,)).item()
-                for _ in range(num_erases):
-                    # 生成随机长方形区域
-                    erase_w = int(w * torch.rand(1).item() * 0.3)  # 最多擦除30%宽度
-                    erase_h = int(h * torch.rand(1).item() * 0.2)  # 最多擦除20%高度
+        #         # 创建1-5个随机擦除区域
+        #         num_erases = torch.randint(1, 6, (1,)).item()
+        #         for _ in range(num_erases):
+        #             # 生成随机长方形区域
+        #             erase_w = int(w * torch.rand(1).item() * 0.3)  # 最多擦除30%宽度
+        #             erase_h = int(h * torch.rand(1).item() * 0.2)  # 最多擦除20%高度
                     
-                    # 随机位置
-                    x1 = int((w - erase_w) * torch.rand(1).item())
-                    y1 = int((h - erase_h) * torch.rand(1).item())
+        #             # 随机位置
+        #             x1 = int((w - erase_w) * torch.rand(1).item())
+        #             y1 = int((h - erase_h) * torch.rand(1).item())
                     
-                    # 应用擦除 (设置为随机值或者背景色)
-                    if torch.rand(1).item() < 0.5:
-                        # 随机杂点
-                        noise = torch.rand(3, erase_h, erase_w, device=device)
-                        augmented_imgs[i, :, y1:y1+erase_h, x1:x1+erase_w] = noise
-                    else:
-                        # 背景色 (假设为白色或黑色)
-                        value = torch.tensor(1.0 if torch.rand(1).item() < 0.5 else 0.0, device=device)
-                        augmented_imgs[i, :, y1:y1+erase_h, x1:x1+erase_w] = value
+        #             # 应用擦除 (设置为随机值或者背景色)
+        #             if torch.rand(1).item() < 0.5:
+        #                 # 随机杂点
+        #                 noise = torch.rand(3, erase_h, erase_w, device=device)
+        #                 augmented_imgs[i, :, y1:y1+erase_h, x1:x1+erase_w] = noise
+        #             else:
+        #                 # 背景色 (假设为白色或黑色)
+        #                 value = torch.tensor(1.0 if torch.rand(1).item() < 0.5 else 0.0, device=device)
+        #                 augmented_imgs[i, :, y1:y1+erase_h, x1:x1+erase_w] = value
         
         # 3. 模拟模糊 (20%概率) - 修复版本
         if torch.rand(1).item() < 0.2:

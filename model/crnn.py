@@ -151,8 +151,7 @@ class MMCRNN(BaseModel):
 
         # CTC损失函数
         self.loss_fn = nn.CTCLoss(blank=0, reduction="mean")
-        # 添加梯度裁剪参数
-        self.max_grad_norm = 5.0
+
 
     def forward(self, imgs, labels=None, target_lengths=None, texts=None, mode="tensor"):
         if self.training and mode == "loss":

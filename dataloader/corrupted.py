@@ -1,8 +1,10 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
 from PIL import Image
 import os
+
+from mmocr.structures import TextRecogDataSample
+from mmengine.structures import LabelData
 
 
 # 字符到索引的映射，包括空白字符
@@ -55,7 +57,7 @@ class CTCImageDataset(Dataset):
         except (IOError, OSError) as e:
             print(f"Error loading image {img_path}: {e}")
             # 创建一个空白图像替代损坏的图像
-            image = Image.new("RGB", (224, 64), color=(0, 0, 0))
+            image = Image.new("RGB", (256, 64), color=(0, 0, 0))
 
         # 应用变换
         if self.transform:
@@ -64,8 +66,27 @@ class CTCImageDataset(Dataset):
         # 将文本标签转换为索引序列
         label = torch.tensor([self.char_to_idx[c] for c in text], dtype=torch.long)
 
-        # 返回的是(img, label)，对应mmengine中的数据格式
-        return {"img": image, "text": text, "label": label, "length": len(label)}
+        # 创建符合MMEngine格式的数据结构
+        data_sample = TextRecogDataSample()
+
+        # 添加图像元信息
+        img_meta = {
+            "img_path": img_path,
+            "ori_shape": image.shape if hasattr(image, "shape") else (64, 256, 3),
+            "img_shape": image.shape if hasattr(image, "shape") else (64, 256, 3),
+        }
+
+        # 创建gt_text
+        gt_text = LabelData(metainfo=img_meta)
+        gt_text.item = text
+        gt_text.indices = label
+        gt_text.length = len(label)
+
+        # 设置数据样本的gt_text字段
+        data_sample.gt_text = gt_text
+
+        # 返回的是(img, data_sample)，符合mmengine的数据格式
+        return {"inputs": image, "data_samples": data_sample}
 
 
 char_to_idx, idx_to_char = build_char_map(
@@ -74,70 +95,5 @@ char_to_idx, idx_to_char = build_char_map(
 
 num_chars = len(char_to_idx)
 
-# 图像变换
-transform = transforms.Compose(
-    [
-        transforms.Resize((64, 224)),  # 调整为适合OCR的大小
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ]
-)
-
-# 创建数据集
-train_dataset = CTCImageDataset(
-    label_file="data/syth80k/train/labels_s.txt",
-    img_dir="data/syth80k/train/s_incomplete",
-    char_to_idx=char_to_idx,
-    transform=transform,
-)
-
-test_dataset = CTCImageDataset(
-    label_file="data/syth80k/test/labels_t.txt",
-    img_dir="data/syth80k/test/t_incomplete",
-    char_to_idx=char_to_idx,
-    transform=transform,
-)
 
 
-# 创建DataLoader时的collate_fn来处理变长序列
-def ctc_collate_fn(batch):
-    imgs = []
-    labels = []
-    texts = []
-    lengths = []
-
-    for sample in batch:
-        imgs.append(sample["img"])
-        labels.extend(sample["label"].tolist())
-        texts.append(sample["text"])
-        lengths.append(sample["length"])
-
-    # 将图像堆叠为一个批次
-    imgs = torch.stack(imgs, 0)
-
-    # 创建目标长度张量
-    target_lengths = torch.tensor(lengths, dtype=torch.long)
-
-    # 平展的标签张量
-    targets = torch.tensor(labels, dtype=torch.long)
-
-    return {
-        "imgs": imgs,
-        "labels": targets,
-        "target_lengths": target_lengths,
-        "texts": texts,
-    }
-
-
-# 创建数据加载器
-train_loader = DataLoader(
-    train_dataset,
-    batch_size=128,
-    shuffle=True,
-    num_workers=12,
-    collate_fn=ctc_collate_fn,
-)
-
-test_loader = DataLoader(
-    test_dataset, batch_size=128, shuffle=False, num_workers=4, collate_fn=ctc_collate_fn
-)

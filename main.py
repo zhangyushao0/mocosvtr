@@ -1,10 +1,9 @@
 from torch.optim import AdamW
 from mmengine.runner import Runner
-from dataloader.corrupted import train_loader, test_loader
-from dataloader.corrupted import num_chars, idx_to_char
-from model.crnn import MMCRNN
+from dataloader.dataloader import train_loader, test_loader
 from test import OCRAccuracy, OCRCharAccuracy
 import argparse
+from model.svtr.svtr_large import SVTRModel, dictionary
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
@@ -22,19 +21,37 @@ def parse_args():
 
 def main():
     args = parse_args()
-    optimizer = dict(type=AdamW, lr=1e-4, weight_decay=1e-4)
+    optimizer = dict(type=AdamW, lr=2.5e-4, weight_decay=1e-4)
     optim_wrapper = dict(optimizer=optimizer)
-
+    param_scheduler = [
+        dict(
+            type="LinearLR",
+            start_factor=0.2,
+            end_factor=1.0,
+            end=3,
+            verbose=False,
+            convert_to_iter_based=True,
+        ),
+        dict(
+            type="CosineAnnealingLR",
+            T_max=38,
+            begin=25,
+            end=40,
+            verbose=False,
+            convert_to_iter_based=True,
+        ),
+    ]
+    default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=10))
     runner = Runner(
         # 用以训练和验证的模型，需要满足特定的接口需求
-        model=MMCRNN(num_chars),
+        model=SVTRModel,
         # 工作路径，用以保存训练日志、权重文件信息
         work_dir="./work_dir",
         # 训练数据加载器，需要满足 PyTorch 数据加载器协议
         train_dataloader=train_loader,
         # 优化器包装，用于模型优化，并提供 AMP、梯度累积等附加功能
         optim_wrapper=optim_wrapper,
-        param_scheduler = dict(type='MultiStepLR', by_epoch=True, milestones=[10, 30], gamma=0.1),
+        param_scheduler = param_scheduler,
         # 训练配置，用于指定训练周期、验证间隔等信息
         train_cfg=dict(by_epoch=True, max_epochs=40, val_interval=1),
         # 验证数据加载器，需要满足 PyTorch 数据加载器协议
@@ -42,9 +59,9 @@ def main():
         # 验证配置，用于指定验证所需要的额外参数
         val_cfg=dict(),
         # 用于验证的评测器，这里使用默认评测器，并评测指标
-        val_evaluator=dict(type=OCRAccuracy, idx_to_char=idx_to_char),
+        val_evaluator=dict(type=OCRAccuracy, dictionary=dictionary),
+        default_hooks = default_hooks,
         launcher=args.launcher,
-
     )
     runner.train()
 

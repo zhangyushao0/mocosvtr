@@ -1,10 +1,10 @@
-from torch.optim import AdamW
+from torch.optim import AdamW, SGD
 from mmengine.runner import Runner
-from dataloader.dataloader import train_loader, test_loader
-from test import OCRAccuracy, OCRCharAccuracy
+from dataloader.corrupted_intact_moco import train_loader
 import argparse
-from model.svtr.svtr_moco import SVTRModel, dictionary
-
+from model.svtr.moco import MoCoSVTRModel
+import torch
+# torch.set_float32_matmul_precision('high')
 def parse_args():
     parser = argparse.ArgumentParser(description='Distributed Training')
     parser.add_argument(
@@ -21,30 +21,29 @@ def parse_args():
 
 def main():
     args = parse_args()
-    optimizer = dict(type=AdamW, lr=2.5e-4, weight_decay=1e-4)
+    optimizer = dict(type=AdamW, lr=5e-4, weight_decay=1e-4)
     optim_wrapper = dict(optimizer=optimizer)
     param_scheduler = [
         # dict(
         #     type="LinearLR",
         #     start_factor=0.2,
         #     end_factor=1.0,
-        #     end=3,
+        #     end=2,
         #     verbose=False,
         #     convert_to_iter_based=True,
         # ),
         dict(
             type="CosineAnnealingLR",
-            T_max=38,
-            begin=25,
-            end=40,
+            T_max=80,
+            end=80,
             verbose=False,
             convert_to_iter_based=True,
         ),
     ]
-    default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=10))
+    default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=20))
     runner = Runner(
         # 用以训练和验证的模型，需要满足特定的接口需求
-        model=SVTRModel,
+        model=MoCoSVTRModel,
         # 工作路径，用以保存训练日志、权重文件信息
         work_dir="./work_dir",
         # 训练数据加载器，需要满足 PyTorch 数据加载器协议
@@ -53,13 +52,13 @@ def main():
         optim_wrapper=optim_wrapper,
         param_scheduler = param_scheduler,
         # 训练配置，用于指定训练周期、验证间隔等信息
-        train_cfg=dict(by_epoch=True, max_epochs=40, val_interval=1),
-        # 验证数据加载器，需要满足 PyTorch 数据加载器协议
-        val_dataloader=test_loader,
+        train_cfg=dict(by_epoch=True, max_epochs=80, val_interval=-1),
+        # # 验证数据加载器，需要满足 PyTorch 数据加载器协议
+        # val_dataloader=test_loader,
         # 验证配置，用于指定验证所需要的额外参数
-        val_cfg=dict(),
+        # val_cfg=dict(),
         # 用于验证的评测器，这里使用默认评测器，并评测指标
-        val_evaluator=dict(type=OCRAccuracy, dictionary=dictionary),
+        # val_evaluator=dict(type=OCRAccuracy, dictionary=dictionary),
         default_hooks = default_hooks,
         launcher=args.launcher,
     )

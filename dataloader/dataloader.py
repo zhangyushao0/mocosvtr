@@ -37,8 +37,8 @@ test_C_dataset = CTCImageDataset(
     transform=transform,
 )
 # 合并数据集
-combined_dataset = ConcatDataset([train_F_dataset, train_C_dataset])
-
+# combined_dataset = ConcatDataset([train_F_dataset, train_C_dataset])
+combined_dataset = ConcatDataset([train_C_dataset])
 
 
 # 创建DataLoader时的collate_fn来处理变长序列
@@ -59,12 +59,12 @@ def ctc_collate_fn(batch):
 # 创建数据加载器
 train_loader = DataLoader(
     combined_dataset,
-    batch_size=128,
+    batch_size=2048,
     shuffle=True,
     num_workers=12,
     collate_fn=ctc_collate_fn,
 )
 
 test_loader = DataLoader(
-    test_C_dataset, batch_size=128, shuffle=False, num_workers=4, collate_fn=ctc_collate_fn
+    test_C_dataset, batch_size=2048, shuffle=False, num_workers=4, collate_fn=ctc_collate_fn
 )

@@ -1,10 +1,9 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from PIL import Image
 import os
 import random
 from torchvision import transforms
-
 
 
 
@@ -87,6 +86,19 @@ class MoCoTextDataset(Dataset):
             "imgs_k": image_k,
             "idxs": idx
         }
+    
+class IndexMappedDataset(Dataset):
+    def __init__(self, dataset, start_idx=0):
+        self.dataset = dataset
+        self.start_idx = start_idx
+        
+    def __len__(self):
+        return len(self.dataset)
+        
+    def __getitem__(self, idx):
+        item = self.dataset[idx]
+        item['idxs'] = torch.tensor(self.start_idx + idx)
+        return item
 
 # 图像变换
 transform = transforms.Compose(
@@ -97,8 +109,8 @@ transform = transforms.Compose(
     ]
 )
 
-    # 初始化数据集
-dataset = MoCoTextDataset(
+# 初始化syn80k数据集
+syn80k_dataset = MoCoTextDataset(
         label_file="data/syth80k/train/labels_s.txt",
         imgs_q_dir="data/syth80k/train/s_incomplete",
         imgs_k_dir="data/syth80k/train/s_f/s_f",  # 可以使用相同或不同的目录
@@ -106,10 +118,52 @@ dataset = MoCoTextDataset(
         transform_k=transform,
         same_image=False  # 如果为True，将忽略imgs_k_dir参数
     )
+# 初始化IC13数据集
+ic13_dataset = MoCoTextDataset(
+        label_file="data/TII-ST/IC13/label_train.txt",
+        imgs_q_dir="data/TII-ST/IC13/train_incomplete",
+        imgs_k_dir="data/TII-ST/IC13/train_f",  # 可以使用相同或不同的目录
+        transform_q=transform,
+        transform_k=transform,
+        same_image=False  # 如果为True，将忽略imgs_k_dir参数
+    )
+
+# 初始化IC15数据集
+ic15_dataset = MoCoTextDataset(
+        label_file="data/TII-ST/IC15/label.txt",
+        imgs_q_dir="data/TII-ST/IC15/train_incomplete",
+        imgs_k_dir="data/TII-ST/IC15/train_f",  # 可以使用相同或不同的目录
+        transform_q=transform,
+        transform_k=transform,
+        same_image=False  # 如果为True，将忽略imgs_k_dir参数
+    )
+
+# 初始化IC17数据集
+ic17_dataset = MoCoTextDataset(
+        label_file="data/TII-ST/IC17/label.txt",
+        imgs_q_dir="data/TII-ST/IC17/train_incomplete",
+        imgs_k_dir="data/TII-ST/IC17/train_f",  # 可以使用相同或不同的目录
+        transform_q=transform,
+        transform_k=transform,
+        same_image=False  # 如果为True，将忽略imgs_k_dir参数
+    )
+
+
+start_idx = 0
+syn80k_mapped = IndexMappedDataset(syn80k_dataset, start_idx)
+start_idx += len(syn80k_dataset)
+ic13_mapped = IndexMappedDataset(ic13_dataset, start_idx)
+start_idx += len(ic13_dataset)
+ic15_mapped = IndexMappedDataset(ic15_dataset, start_idx)
+start_idx += len(ic15_dataset)
+ic17_mapped = IndexMappedDataset(ic17_dataset, start_idx)
+
+combined_dataset = ConcatDataset([syn80k_mapped, ic13_mapped, ic15_mapped, ic17_mapped])
+
 
 # 创建数据加载器
 train_loader = DataLoader(
-    dataset,
+    combined_dataset,
     batch_size=256,
     shuffle=True,
     num_workers=12

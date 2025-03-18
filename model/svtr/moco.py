@@ -588,7 +588,7 @@ class MoCoSVTR(BaseModel):
         return self.val_step(data, optim_wrapper)
 
 
-pretrained = "work_dir/epoch_60.pth"
+pretrained = "work_dir/epoch_20.pth"
 
 MoCoSVTRModel = MoCoSVTR(    
     preprocessor=STN(

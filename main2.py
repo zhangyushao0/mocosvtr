@@ -24,21 +24,22 @@ def main():
     optimizer = dict(type=AdamW, lr=5e-4, weight_decay=1e-4)
     optim_wrapper = dict(optimizer=optimizer)
     param_scheduler = [
-        # dict(
-        #     type="LinearLR",
-        #     start_factor=0.2,
-        #     end_factor=1.0,
-        #     end=2,
-        #     verbose=False,
-        #     convert_to_iter_based=True,
-        # ),
         dict(
-            type="CosineAnnealingLR",
-            T_max=80,
-            end=80,
+            type="LinearLR",
+            start_factor=0.2,
+            end_factor=1.0,
+            end=2,
             verbose=False,
             convert_to_iter_based=True,
         ),
+        # dict(
+        #     type="CosineAnnealingLR",
+        #     T_max=78,
+        #     end=80,
+        #     eta_min=1e-6,
+        #     verbose=False,
+        #     convert_to_iter_based=True,
+        # ),
     ]
     default_hooks = dict(checkpoint=dict(type='CheckpointHook', interval=20))
     runner = Runner(

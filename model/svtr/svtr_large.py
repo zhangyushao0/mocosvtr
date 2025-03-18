@@ -4,6 +4,7 @@ from .svtr_decoder import SVTRDecoder
 from mmengine.model import BaseModel
 from mmocr.models.common.dictionary import Dictionary
 
+
 class SVTR(BaseModel):
     """SVTR文本识别模型 (Scene Text Recognition with a Single Visual Model)
 
@@ -75,7 +76,6 @@ dictionary = Dictionary(
     with_padding=True,
     with_unknown=True,
 )
-
 
 
 SVTRModel = SVTR(

@@ -2,7 +2,7 @@ from torch.optim import AdamW, SGD
 from mmengine.runner import Runner
 from dataloader.union14mu import loader
 import argparse
-from model.svtr.seqclr import SeqCLRModel
+from model.svtr.moco import MoCoSVTRModel
 import torch
 
 
@@ -46,7 +46,7 @@ def main():
     default_hooks = dict(checkpoint=dict(type="CheckpointHook", interval=20))
     runner = Runner(
         # 用以训练和验证的模型，需要满足特定的接口需求
-        model=SeqCLRModel,
+        model=MoCoSVTRModel,
         # 工作路径，用以保存训练日志、权重文件信息
         work_dir="./work_dir",
         # 训练数据加载器，需要满足 PyTorch 数据加载器协议
